@@ -73,7 +73,7 @@ if __name__ == '__main__':
     return_val = pty.fork()      
 
     if return_val[0] == 0:           
-        os.execv("/usr/bin/bash",["/usr/bin/bash"])
+        os.execv("/bin/bash",["/bin/bash"])
     
     state = 0
     fd = return_val[1]
