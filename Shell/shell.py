@@ -35,7 +35,7 @@ class ShellTextInput(TextInput):
                 last_row_index = 0
                 
             last_line_text = full_text[last_row_index:]
-            text_to_write = last_line_text[last_line_text.find("]$")+2:].strip()
+            text_to_write = last_line_text[self.min_pos:].strip()
             os.write(self.win_parent.fd,text_to_write+'\n')
         TextInput.insert_text(self,substring,from_undo)
         
@@ -66,7 +66,7 @@ class MainWindow(FloatLayout):
         if s!="":
             s = unicode(s,'utf-8',errors='replace')
             self.textInput.text += s           
-            self.textInput.min_pos = self.textInput.cursor            
+            self.textInput.min_pos = len(s)         
 
 if __name__ == '__main__':
     
