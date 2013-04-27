@@ -1,0 +1,88 @@
+#:kivy 1.0
+
+<MainWindow>:
+    textInput: text_input
+    orientation: "vertical"
+    button_plus: btn_plus
+    button_minus: btn_minus
+    button_multiply: btn_multiply
+    button_divide: btn_divide
+    button_equal_to: btn_equal
+    button_decimal: btn_decimal
+    
+    TextInput:
+        id: text_input
+        size_hint: (1,0.3)
+        
+    GridLayout:
+        cols: 4
+        
+        Button:
+            text: "7"
+            on_press: root.on_button_press(self.text)
+            
+        Button:
+            text: "8"
+            on_press: root.on_button_press(self.text)
+            
+        Button:
+            text: "9"
+            on_press: root.on_button_press(self.text)
+
+        Button:
+            id: btn_divide
+            text: "/"
+            on_press: root.divide()
+            
+        Button:
+            text: "4"
+            on_press: root.on_button_press(self.text)
+            
+        Button:
+            text: "5"
+            on_press: root.on_button_press(self.text)
+            
+        Button:
+            text: "6"
+            on_press: root.on_button_press(self.text)
+
+        Button:
+            id: btn_multiply
+            text: "x"
+            on_press: root.multiply()
+            
+        Button:
+            text: "1"
+            on_press: root.on_button_press(self.text)
+            
+        Button:
+            text: "2"
+            on_press: root.on_button_press(self.text)
+            
+        Button:
+            text: "3"
+            on_press: root.on_button_press(self.text)
+
+        Button:
+            id: btn_minus
+            text: "-"
+            on_press: root.minus()
+            
+        Button:
+            text: "0"
+            on_press: root.on_button_press(self.text)
+
+        Button:
+            id: btn_decimal
+            text: "."
+            on_press: root.decimal()
+
+        Button:
+            id: btn_equal
+            text: "="
+            on_press: root.equal()
+
+        Button:
+            id: btn_plus
+            text: "+"
+            on_press: root.plus()
