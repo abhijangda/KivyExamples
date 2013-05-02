@@ -1,0 +1,15 @@
+#:kivy 1.0
+
+<MainWindow>:    
+    NewButton:
+        canvas:
+            Clear
+            Color:
+                rgba: (0,0,1,1)
+            BorderImage:
+                border: self.border
+                pos: self.pos
+                size: self.size
+                source: self.background_normal if self.state == 'normal' else self.background_down
+    NewButton:
+        
