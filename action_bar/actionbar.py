@@ -143,7 +143,10 @@ class ActionGroup(ActionItem, Spinner):
         super(ActionGroup, self).__init__(**kwargs)
         self.list_action_item = []
         self.option_cls = ActionButton
-        self.background_normal = './action_group.png'
+        self.background_normal = './action_group2.png'
+        self.background_down = './action_group_down.png'
+        self.background_disabled_normal = './action_spinner_disabled.png'
+        self.border = [0,0,0,0]
 
     def add_widget(self, item):
         if not isinstance(item, ActionItem):
@@ -228,6 +231,7 @@ class ActionView(BoxLayout):
         self._overflow_group = ActionGroup(
             background_normal=self.overflow_icon)
         self._overflow_group.background_normal = self.overflow_icon
+        self._overflow_group.background_down = './overflow_down.png'
 
         self._app_action_item = ActionButton(
             background_normal=self.app_icon)
