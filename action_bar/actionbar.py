@@ -33,6 +33,7 @@ from kivy.uix.spinner import Spinner
 from kivy.graphics import *
 from kivy.graphics.instructions import *
 from kivy.lang import *
+from kivy.core.image import Image
 
 Builder.load_string('''
 <ActionBar>:
@@ -77,6 +78,9 @@ Builder.load_string('''
     minimum_width: 50
     background_normal: './action_item.png'
 
+<ActionDropDown>:
+    auto_width: False
+
 <ActionGroup>:
     background_normal: './action_group2.png'
     background_down: './action_group_down.png'
@@ -118,6 +122,7 @@ class ActionButton(Button, ActionItem):
 
     def __init__(self, **kwargs):
         super(ActionButton, self).__init__(**kwargs)
+        print self.background_down
 
 class ActionToggleButton(ActionItem, ToggleButton):
     '''ActionToggleButton class
@@ -145,7 +150,12 @@ class ActionSeparator(ActionItem):
     def __init__(self, **kwargs):
         super(ActionSeparator, self).__init__(**kwargs)
         
-        
+
+class ActionDropDown(DropDown):
+
+    def __init__(self, *args):
+        super(ActionDropDown, self).__init__(*args)
+    
 class ActionGroup(Spinner, ActionItem):
     '''ActionGroup class
     '''
@@ -153,6 +163,7 @@ class ActionGroup(Spinner, ActionItem):
     def __init__(self, **kwargs):
         super(ActionGroup, self).__init__(**kwargs)
         self.list_action_item = []
+        self.dropdown_cls = ActionDropDown
 
     def add_widget(self, item):
         if not isinstance(item, ActionItem):
@@ -205,12 +216,6 @@ class ActionView(BoxLayout):
     '''Image for 'previous' ActionButton for default graphical representation.
     '''
 
-    previous_down = StringProperty(
-        './previous_normal.png')
-    '''Image for 'previous' ActionButton when pressed,
-       for default graphical representation.
-    '''
-    
     separator_image = StringProperty(
         './separator.png')
     '''Image for ActionSeparator in ActionView.
@@ -249,21 +254,40 @@ class ActionView(BoxLayout):
         self._app_action_item.important = True
         self._app_action_item.bind(on_release=self._emit_on_previous)
 
-        self._previous_normal_item = ActionButton()
-        self._previous_normal_item.background_normal = self.previous_normal
-        self._previous_normal_item.important = True
+        self._previous_action_item = ActionButton()
+        self._previous_action_item.important = True
+        self._previous_action_item.bind(pos=self.previous_draw)
+        self._previous_action_item.bind(size=self.previous_draw)
+        self._previous_action_item.bind(on_press=self.previous_draw)
+        self._previous_action_item.bind(on_release=self.previous_draw)
         
         self._list_action_group = []
-        self._list_action_items = [self._previous_normal_item, self._app_action_item]
+        self._list_action_items = [self._previous_action_item,
+                                   self._app_action_item]
 
+    def previous_draw(self, *args):
+
+        self._previous_action_item.canvas.clear()
+        with self._previous_action_item.canvas:
+            if self._previous_action_item.state == 'normal':
+                texture = Image(self.previous_normal) 
+                Rectangle(source=self.previous_normal,
+                      pos=(self._previous_action_item.center_x-texture.width/2, self._previous_action_item.center_y-texture.height/2),
+                      size=texture.size)
+            elif self._previous_action_item.state == 'down':
+                Rectangle(source=self._previous_action_item.background_down,
+                      pos=self._previous_action_item.pos,
+                      size=self._previous_action_item.size)
+                texture = Image(self.previous_normal) 
+                Rectangle(source=self.previous_normal,
+                      pos=(self._previous_action_item.center_x-texture.width/2, self._previous_action_item.center_y-texture.height/2),
+                      size=texture.size)
+                
     def on_previous(self):
         pass
 
     def _emit_on_previous(self, *args):
         self.dispatch('on_previous')
-
-    def on_previous_normal(self, action_bar, icon):
-        self._previous_normal_item.background_normal = icon
 
     def on_overflow_normal(self, action_bar, icon):
         self._overflow_group.background_normal = icon
