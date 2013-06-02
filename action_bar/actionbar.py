@@ -1,16 +1,14 @@
 '''Each ActionBar will have only one ActionView and many ContextualActionView.
-ActionView has its own title, icon and previous_normal properties. ActionView will
-emit on_previous event whenever icon and previous_normal ActionItems are clicked.
-ActionView will have its own ActionItems, which can be ActionButton,
-ActionToggleButton, ActionCheck and ActionSeparator. If ActionView's
-use_separator is set to True, then there will be a ActionSeparator after
-every ActionGroup. If user wants to manually, add an ActionSeparator then he
-should set use_separator to False. ActionView has overflow_icon property to set
-icon to be used for ActionView's overflow_action_item.
+ActionView will have ActionPrevious containing its own title, app_icon and
+previous_icon properties. ActionBar will emit on_previous event whenever
+ActionPrevious is clicked. ActionView will have its own ActionItems, which can
+be ActionButton, ActionToggleButton, ActionCheck and ActionSeparator.
+If ActionView's use_separator is set to True, then there will be a
+ActionSeparator after every ActionGroup. If user wants to manually, add an
+ActionSeparator then use_separator should be set to False. ActionView
+has ActionOverflow property to set overflow ActionGroup to be used for.
 ActionGroup contains ActionItems.
-ContextualActionView also contains an ok_icon property, which is used to set
-icon for its ok_action_item. Whenever, ok_action_item is clicked, on_done event
-is emitted.
+ContextualActionView is a subclass for ActionView.
 ActionBar contains an action_view property to set the actionview.
 ContextualActionView could be added by add_widget.
 '''
@@ -30,11 +28,10 @@ from kivy.uix.label import Label
 from kivy.properties import ObjectProperty, NumericProperty, \
      BooleanProperty, StringProperty, ListProperty, OptionProperty
 from kivy.uix.spinner import Spinner
-from kivy.graphics import *
-from kivy.graphics.instructions import *
-from kivy.lang import *
+from kivy.graphics import Canvas
+from kivy.lang import Builder
 from kivy.core.image import Image
-from functools import *
+from functools import partial
 
 Builder.load_string('''
 <ActionBar>:
@@ -69,7 +66,7 @@ Builder.load_string('''
 
 <ActionButton>:
     minimum_width: 50
-    background_normal: './action_item.png'
+    background_normal: 'atlas://data/images/defaulttheme/button' if self.inside_group else './action_item.png'
 
 <ActionToggleButton>:
     minimum_width: 50
@@ -123,6 +120,8 @@ Builder.load_string('''
     border: 0, 0, 0, 0
     background_normal: './overflow.png'
     background_down: './overflow_down.png'
+    size_hint_x: None
+    minimum_width: '48sp'
     width: self.texture_size[0] if self.texture else self.minimum_width
 
 <ActionDropDown>:
@@ -145,6 +144,11 @@ class ActionItem(Widget):
 
     important = BooleanProperty(False)
     '''Determines if ActionItem is important or not.
+    '''
+
+    inside_group = BooleanProperty(False)
+    '''(internal) Determines, if ActionItem is displayed inside
+       ActionGroup or not
     '''
 
     def __init__(self, **kwargs):
@@ -242,7 +246,10 @@ class ActionGroup(Spinner, ActionItem):
     '''
 
     mode = OptionProperty('normal', options=('normal', 'spinner'))
-    '''
+    '''Sets current mode of ActionGroup. If mode is 'normal' then ActionGroup
+       children will be displayed normally when there is enough space. If mode
+       is 'spinner', then AcionGroup will be displayed even if there is enough
+       space.
     '''
 
     def __init__(self, **kwargs):
@@ -263,6 +270,7 @@ class ActionGroup(Spinner, ActionItem):
         self.clear_widgets()
         for item in self.list_action_item:
             item.size_hint_y = None
+            item.inside_group = True
             self._dropdown.add_widget(item)
 
     def _build_dropdown(self, *largs):
@@ -372,6 +380,7 @@ class ActionView(BoxLayout):
             #If yes, then display them
             for child in self._list_action_items:
                 child.size_hint_y = 1
+                child.inside_group = False
                 super(ActionView, self).add_widget(child)
 
             for group in self._list_action_group:
@@ -382,6 +391,7 @@ class ActionView(BoxLayout):
                     if group.list_action_item != []:
                         super(ActionView, self).add_widget(ActionSeparator())                       
                     for child in group.list_action_item:
+                        child.inside_group = False
                         child.size_hint_y = 1
                         super(ActionView, self).add_widget(child)
 
@@ -403,6 +413,7 @@ class ActionView(BoxLayout):
                 #If yes, then display them using ActionGroup
                 for child in self._list_action_items:
                     super(ActionView, self).add_widget(child)
+                    child.inside_group = False
 
                 for group in self._list_action_group:
                     super(ActionView, self).add_widget(group)
@@ -421,6 +432,7 @@ class ActionView(BoxLayout):
                     if child.important == True:
                         if child.minimum_width + total_width < width:
                             super(ActionView, self).add_widget(child)
+                            child.inside_group = False
                             total_width += child.minimum_width
                         else:
                             hidden_items.append(child)
@@ -433,6 +445,7 @@ class ActionView(BoxLayout):
                         if child.minimum_width + total_width < width:
                             super(ActionView, self).add_widget(child)
                             total_width += child.minimum_width
+                            child.inside_group = False
                             hidden_items.remove(child)
 
                 #If space is left then display ActionItem inside
@@ -478,9 +491,10 @@ class ActionBar(BoxLayout):
     '''Background image of ActionView for default graphical represenation.
     '''
 
+    __events__ = ('on_previous',)
+
     def __init__(self, **kwargs):
         super(ActionBar, self).__init__(**kwargs)
-        self.register_event_type('on_previous')
         self._stack_cont_action_view = []
         self._emit_previous = partial(self.dispatch, 'on_previous')
 
@@ -520,28 +534,60 @@ if __name__ == "__main__":
     from kivy.uix.floatlayout import FloatLayout
     from kivy.clock import Clock
 
-    float_layout = FloatLayout()
-    overflow_group = ActionOverflow()
-    action_previous = ActionPrevious(title='Title')
-    action_view = ActionView(use_separator=True)
-    action_view.add_widget(action_previous)
-    action_view.add_widget(overflow_group)
-    action_bar = ActionBar(size_hint=(1,0.1),
-                           pos_hint={'top':1, 'y':1})
-    action_bar.add_widget(action_view)
-    
+    Builder.load_string ('''
+<MainWindow>:
+    ActionBar:
+        size_hint: 1,0.1
+        pos_hint: {'top':1}
+        ActionView:
+            ActionPrevious:
+                title: 'Title'
+            ActionOverflow:
+            ActionButton:
+                text: 'Btn0'
+            ActionButton:
+                text: 'Btn1'
+            ActionButton:
+                text: 'Btn2'
+            ActionButton:
+                text: 'Btn3'
+            ActionButton:
+                text: 'Btn4'
+            ActionGroup:
+                text: 'Group1'
+                mode: 'spinner'
+                ActionButton:
+                    text: 'Btn5'
+                ActionButton:
+                    text: 'Btn6'
+                ActionButton:
+                    text: 'Btn7'
+''')
+    class MainWindow(FloatLayout):
+        pass
 
-    list_action_btn = []
-    for i in xrange(10):
-        action_btn = ActionButton(text='Btn%d'%i)
-        list_action_btn.append(action_btn)
-    for i in xrange(5):
-        action_view.add_widget(list_action_btn[i])
-
-    action_grp_1 = ActionGroup(text='Group1',mode='normal')
-    for i in xrange(5, 9):
-        action_grp_1.add_widget(list_action_btn[i])
-    action_view.add_widget(action_grp_1)
+    float_layout = MainWindow()
+##    overflow_group = ActionOverflow()
+##    action_previous = ActionPrevious(title='Title')
+##    action_view = ActionView(use_separator=True)
+##    action_view.add_widget(action_previous)
+##    action_view.add_widget(overflow_group)
+##    action_bar = ActionBar(size_hint=(1,0.1),
+##                           pos_hint={'top':1})
+##    action_bar.add_widget(action_view)
+##    
+##
+##    list_action_btn = []
+##    for i in xrange(10):
+##        action_btn = ActionButton(text='Btn%d'%i)
+##        list_action_btn.append(action_btn)
+##    for i in xrange(5):
+##        action_view.add_widget(list_action_btn[i])
+##
+##    action_grp_1 = ActionGroup(text='Group1',mode='normal')
+##    for i in xrange(5, 9):
+##        action_grp_1.add_widget(list_action_btn[i])
+##    action_view.add_widget(action_grp_1)
 
 ##    list_cont_view = []
 ##    def push_cont_view(btn):
@@ -567,5 +613,4 @@ if __name__ == "__main__":
 ##        cont.add_widget(action_grp)
 ##        list_cont_view.append(cont)
 
-    float_layout.add_widget(action_bar)
     runTouchApp(float_layout)
