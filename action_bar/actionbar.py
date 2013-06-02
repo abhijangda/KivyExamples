@@ -95,13 +95,16 @@ Builder.load_string('''
         Image:
             id: _previous_image
             source: root.previous_image
+            width: self.texture_size[0] if self.texture else 20
         Image:
             id: _app_image
             source: root.app_image
+            width: self.texture_size[0] if self.texture else 20
         Label:
             id: _title
             text: root.title
             text_size: self.size
+            shorten: True
             halign: 'right'
             valign: 'middle'
 
@@ -120,6 +123,7 @@ Builder.load_string('''
     border: 0, 0, 0, 0
     background_normal: './overflow.png'
     background_down: './overflow_down.png'
+    width: self.texture_size[0] if self.texture else self.minimum_width
 
 <ActionDropDown>:
     auto_width: False
@@ -186,16 +190,6 @@ class ActionPrevious(ActionButton):
     def __init__(self, **kwargs):
         super(ActionPrevious, self).__init__(**kwargs)
 
-        self.previous_image_widget.bind(texture = self.on_child_texture)
-        self.app_image_widget.bind(texture = self.on_child_texture)
-        self.title_widget.bind(texture = self.on_child_texture)
-
-    def on_child_texture(self, instance, value):
-        if value is None:
-            return
-
-        instance.size_hint_x = None
-        instance.width = value.width
 
 class ActionToggleButton(ActionItem, ToggleButton):
     '''ActionToggleButton class
@@ -528,10 +522,10 @@ if __name__ == "__main__":
 
     float_layout = FloatLayout()
     overflow_group = ActionOverflow()
-    action_previous = ActionPrevious(title='AppTitle')
-    action_view = ActionView(use_separator=True,
-                             action_previous=action_previous,
-                             overflow_group=overflow_group)
+    action_previous = ActionPrevious(title='Title')
+    action_view = ActionView(use_separator=True)
+    action_view.add_widget(action_previous)
+    action_view.add_widget(overflow_group)
     action_bar = ActionBar(size_hint=(1,0.1),
                            pos_hint={'top':1, 'y':1})
     action_bar.add_widget(action_view)
