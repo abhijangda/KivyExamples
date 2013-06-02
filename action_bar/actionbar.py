@@ -317,17 +317,11 @@ class ActionView(BoxLayout):
         self._list_action_items = []
         self._list_action_group = []
         super(ActionView, self).__init__(**kwargs)
-        self.register_event_type('on_previous')
         self._state = ''
         self.overflow_group = ActionOverflow(use_separator=self.use_separator)
     
     def on_action_previous(self, instance, value):
-        self.action_previous.bind(on_release=partial(self.dispatch,
-                                                     'on_previous'))
         self._list_action_items.insert(0, value)
-
-    def on_previous(self, *args):
-        pass
 
     def add_widget(self, action_item, index=0):
         if not isinstance(action_item, ActionItem):
@@ -499,8 +493,8 @@ class ActionBar(BoxLayout):
     def add_widget(self, view):
         if isinstance(view, ContextualActionView):
             self._stack_cont_action_view.append(view)
-            view.unbind(on_previous=self._emit_previous)
-            view.bind(on_previous=self._emit_previous)
+            view.action_view.unbind(on_release=self._emit_previous)
+            view.action_view.bind(on_release=self._emit_previous)
             self.clear_widgets()
             super(ActionBar, self).add_widget(view)
 
