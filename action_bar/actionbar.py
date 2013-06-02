@@ -13,10 +13,10 @@ ActionBar contains an action_view property to set the actionview.
 ContextualActionView could be added by add_widget.
 '''
 
-__all__ = ('ActionBarException', 'ActionItem', 'ActionTitle',
-           'ActionButton', 'ActionToggleButton', 'ActionCheck',
-           'ActionSeparator', 'ActionGroup', 'ActionView', 
-           'ContextualActionView', 'ActionBar')
+__all__ = ('ActionBarException', 'ActionItem', 'ActionButton',
+           'ActionToggleButton', 'ActionCheck', 'ActionSeparator',
+           'ActionDropDown', 'ActionGroup', 'ActionOverflow',
+           'ActionView', 'ContextualActionView', 'ActionBar')
 
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.dropdown import DropDown
