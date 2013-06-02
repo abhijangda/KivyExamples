@@ -28,12 +28,13 @@ from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.checkbox import CheckBox
 from kivy.uix.label import Label
 from kivy.properties import ObjectProperty, NumericProperty, \
-     BooleanProperty, StringProperty, ListProperty
+     BooleanProperty, StringProperty, ListProperty, OptionProperty
 from kivy.uix.spinner import Spinner
 from kivy.graphics import *
 from kivy.graphics.instructions import *
 from kivy.lang import *
 from kivy.core.image import Image
+from functools import *
 
 Builder.load_string('''
 <ActionBar>:
@@ -47,6 +48,7 @@ Builder.load_string('''
 
 <ActionView>:
     orientation: 'horizontal'
+    padding: '2sp'
     canvas:
         Color:
             rgba: self.background_color
@@ -62,10 +64,6 @@ Builder.load_string('''
             size: self.width, self.height-10
             source: self.background_image
 
-<ActionTitle>:
-    minimum_width: 100
-    important: True
-
 <ActionButton>:
     minimum_width: 50
     background_normal: './action_item.png'
@@ -78,14 +76,50 @@ Builder.load_string('''
     minimum_width: 50
     background_normal: './action_item.png'
 
-<ActionDropDown>:
-    auto_width: False
+<ActionPrevious>:
+    previous_image_widget: _previous_image
+    app_image_widget: _app_image
+    title_widget: _title
+    minimum_width: '200sp'
+    width: self.minimum_width
+    background_normal: './action_item.png'
+    important: True
+    BoxLayout:
+        orientation: 'horizontal'
+        pos: root.pos
+        size: root.size
+        padding: '2dp'
+        Image:
+            id: _previous_image
+            source: root.previous_image
+        Image:
+            id: _app_image
+            source: root.app_image
+        Label:
+            id: _title
+            text: root.title
+            text_size: self.size
+            halign: 'right'
+            valign: 'middle'
 
 <ActionGroup>:
     background_normal: './action_group2.png'
     background_down: './action_group_down.png'
     background_disabled_normal: './action_spinner_disabled.png'
-    border: 0,0,0,0
+    border: 30,20,8,12
+    ActionSeparator:
+        pos: root.pos
+        size: root.separator_width, root.height
+        opacity: 1 if root.use_separator else 0
+        background_image: root.separator_image
+
+<ActionOverflow>:
+    border: 0, 0, 0, 0
+    background_normal: './overflow.png'
+    background_down: './overflow_down.png'
+
+<ActionDropDown>:
+    auto_width: False
 
 <ContextualActionView>:
 ''')
@@ -109,20 +143,56 @@ class ActionItem(Widget):
     def __init__(self, **kwargs):
         super(ActionItem, self).__init__(**kwargs)
 
-class ActionTitle(ActionItem, Label):
-    '''ActionTitle class
-    '''
-
-    def __init__(self, **kwargs):
-        super(ActionTitle, self).__init__(**kwargs)
-
 class ActionButton(Button, ActionItem):
     '''ActionButton class
     '''
 
     def __init__(self, **kwargs):
         super(ActionButton, self).__init__(**kwargs)
-        print self.background_down
+
+class ActionPrevious(ActionButton):
+    '''ActionPrevious class
+    '''
+
+    app_image = StringProperty(
+        './kivy/kivy/data/logo/kivy-icon-32.png')
+    '''Application icon for the ActionView.
+    '''
+
+    previous_image = StringProperty(
+        './previous_normal.png')
+    '''Image for 'previous' ActionButton for default graphical representation.
+    '''
+
+    title = StringProperty('')
+    '''Title for ActionView
+    '''
+
+    previous_image_widget = ObjectProperty(None)
+    '''Widget displaying previous_image, defaults to Image
+    '''
+
+    app_image_widget = ObjectProperty(None)
+    '''Widget displaying app_image, defaults to Image
+    '''
+
+    title_widget = ObjectProperty(None)
+    '''Widget displaying title_widget, defaults to Label
+    '''
+
+    def __init__(self, **kwargs):
+        super(ActionPrevious, self).__init__(**kwargs)
+
+        self.previous_image_widget.bind(texture = self.on_child_texture)
+        self.app_image_widget.bind(texture = self.on_child_texture)
+        self.title_widget.bind(texture = self.on_child_texture)
+
+    def on_child_texture(self, instance, value):
+        if value is None:
+            return
+
+        instance.size_hint_x = None
+        instance.width = value.width
 
 class ActionToggleButton(ActionItem, ToggleButton):
     '''ActionToggleButton class
@@ -149,23 +219,44 @@ class ActionSeparator(ActionItem):
 
     def __init__(self, **kwargs):
         super(ActionSeparator, self).__init__(**kwargs)
-        
 
 class ActionDropDown(DropDown):
+    '''ActionDropDown class
+    '''
 
-    def __init__(self, *args):
-        super(ActionDropDown, self).__init__(*args)
-    
+    def __init__(self, **kwargs):
+        super(ActionDropDown, self).__init__(**kwargs)
+
 class ActionGroup(Spinner, ActionItem):
     '''ActionGroup class
     '''
 
+    use_separator = BooleanProperty(False)
+    '''Whether to use separator after every element or not
+    '''
+
+    separator_image = StringProperty(
+        './separator.png')
+    '''Image for ActionSeparator in ActionView.
+    '''
+
+    separator_width = NumericProperty(1)
+    '''Width of ActionSeparator
+    '''
+
+    mode = OptionProperty('normal', options=('normal', 'spinner'))
+    '''
+    '''
+
     def __init__(self, **kwargs):
-        super(ActionGroup, self).__init__(**kwargs)
         self.list_action_item = []
+        super(ActionGroup, self).__init__(**kwargs)
         self.dropdown_cls = ActionDropDown
 
     def add_widget(self, item):
+        if isinstance(item, ActionSeparator):
+            super(ActionGroup, self).add_widget(item)
+            return
         if not isinstance(item, ActionItem):
             raise ActionBarException('ActionView only accepts ActionItem')
 
@@ -174,7 +265,7 @@ class ActionGroup(Spinner, ActionItem):
     def show_group(self):
         self.clear_widgets()
         for item in self.list_action_item:
-            item.size_hint = (None, None)
+            item.size_hint_y = None
             self._dropdown.add_widget(item)
 
     def _build_dropdown(self, *largs):
@@ -189,11 +280,15 @@ class ActionGroup(Spinner, ActionItem):
     def clear_widgets(self):
         self._dropdown.clear_widgets()
 
+class ActionOverflow(ActionGroup):
+    '''ActionOverflow class
+    '''
+
 class ActionView(BoxLayout):
     '''ActionView class
     '''
 
-    action_title = ObjectProperty(None)
+    action_previous = ObjectProperty(None)
     '''Title for ActionView
     '''
 
@@ -206,108 +301,48 @@ class ActionView(BoxLayout):
     '''Background image of ActionView for default graphical represenation.
     '''
 
-    app_icon = StringProperty(
-        './action_item.png')
-    '''Application icon for the ActionView.
-    '''
-
-    previous_normal = StringProperty(
-        './previous_normal.png')
-    '''Image for 'previous' ActionButton for default graphical representation.
-    '''
-
-    separator_image = StringProperty(
-        './separator.png')
-    '''Image for ActionSeparator in ActionView.
-    '''
-
     use_separator = BooleanProperty(False)
     '''Whether to use separator after every element or not
     '''
 
-    separator_width = NumericProperty(1)
-    '''Width of ActionSeparator
-    '''
-
-    overflow_normal = StringProperty(
-        './overflow.png')
-    '''Image for Overflow ActionGroup for default graphical representation.
-    '''
-
-    overflow_down = StringProperty(
-        './overflow_down.png')
-    '''Image for Overflow ActionGroup when pressed,
-       for default graphical representation
+    overflow_group = ObjectProperty(None)
+    '''Widget to be used for overflow.
+       Defaults to ActionOverflow's instance.
     '''
 
     def __init__(self, **kwargs):
+        self._list_action_items = []
+        self._list_action_group = []
         super(ActionView, self).__init__(**kwargs)
         self.register_event_type('on_previous')
+        self._state = ''
+        self.overflow_group = ActionOverflow(use_separator=self.use_separator)
+    
+    def on_action_previous(self, instance, value):
+        self.action_previous.bind(on_release=partial(self.dispatch,
+                                                     'on_previous'))
+        self._list_action_items.insert(0, value)
 
-        self._overflow_group = ActionGroup()
-        self._overflow_group.background_normal = self.overflow_normal
-        self._overflow_group.background_down = self.overflow_down
-
-        self._app_action_item = ActionButton(
-            background_normal=self.app_icon)
-        self._app_action_item.background_normal = self.app_icon
-        self._app_action_item.important = True
-        self._app_action_item.bind(on_release=self._emit_on_previous)
-
-        self._previous_action_item = ActionButton()
-        self._previous_action_item.important = True
-        self._previous_action_item.bind(pos=self.previous_draw)
-        self._previous_action_item.bind(size=self.previous_draw)
-        self._previous_action_item.bind(on_press=self.previous_draw)
-        self._previous_action_item.bind(on_release=self.previous_draw)
-        
-        self._list_action_group = []
-        self._list_action_items = [self._previous_action_item,
-                                   self._app_action_item]
-
-    def previous_draw(self, *args):
-
-        self._previous_action_item.canvas.clear()
-        with self._previous_action_item.canvas:
-            if self._previous_action_item.state == 'normal':
-                texture = Image(self.previous_normal) 
-                Rectangle(source=self.previous_normal,
-                      pos=(self._previous_action_item.center_x-texture.width/2, self._previous_action_item.center_y-texture.height/2),
-                      size=texture.size)
-            elif self._previous_action_item.state == 'down':
-                Rectangle(source=self._previous_action_item.background_down,
-                      pos=self._previous_action_item.pos,
-                      size=self._previous_action_item.size)
-                texture = Image(self.previous_normal) 
-                Rectangle(source=self.previous_normal,
-                      pos=(self._previous_action_item.center_x-texture.width/2, self._previous_action_item.center_y-texture.height/2),
-                      size=texture.size)
-                
-    def on_previous(self):
+    def on_previous(self, *args):
         pass
-
-    def _emit_on_previous(self, *args):
-        self.dispatch('on_previous')
-
-    def on_overflow_normal(self, action_bar, icon):
-        self._overflow_group.background_normal = icon
-
-    def on_overflow_down(self, action_bar, icon):
-        self._overflow_group.background_down = icon
 
     def add_widget(self, action_item, index=0):
         if not isinstance(action_item, ActionItem):
             raise ActionBarException('ActionView only accepts ActionItem')
+        
+        elif isinstance(action_item, ActionOverflow):
+            #action_item is an ActionOverflow
+            self.overflow_group = action_item
+            action_item.use_separator = self.use_separator
 
-        if isinstance(action_item, ActionTitle):
-            #action_item is an ActionView
-            super(ActionView, self).add_widget(action_item, 1)
-            self.action_title = action_item
-    
         elif isinstance(action_item, ActionGroup):
             #action_item is an ActionGroup
             self._list_action_group.append(action_item)
+            action_item.use_separator = self.use_separator
 
+        elif isinstance(action_item, ActionPrevious):
+            #action_item is ActionPrevious
+            self.action_previous = action_item
         else:
             #otherwise its an ActionItem only
             super(ActionView, self).add_widget(action_item, index)
@@ -315,47 +350,48 @@ class ActionView(BoxLayout):
                 index = len(self._list_action_items)
             self._list_action_items.insert(index, action_item)
 
-    def on_action_title(self, action_view, *args):
-        self._list_action_items.insert(2, args[0])
+    def on_use_separator(self, instance, value):
+        for group in self._list_action_group:
+            group.use_separator = value
 
-    def _create_separator(self):
-        sep = ActionSeparator(
-            background_image=self.separator_image)
-        sep.size_hint_x = None
-        sep.width = 1
-        return sep
-
-    def _add_widget_with_separator(self, child):
-        super(ActionView, self).add_widget(child)
-        if self.use_separator == True:
-            super(ActionView, self).add_widget(self._create_separator())
+    def _clear_all(self):
+        self.clear_widgets()
+        for group in self._list_action_group:
+            group.clear_widgets()
+        
+        self.overflow_group.clear_widgets()
+        self.overflow_group.list_action_item = []
 
     def on_width(self, width, *args):
         total_width = 0
-        self.clear_widgets()
         for child in self._list_action_items:
             total_width += child.minimum_width
 
         for group in self._list_action_group:
-            group.clear_widgets()
             for child in group.list_action_item:
                 total_width += child.minimum_width
-        self._overflow_group.clear_widgets()
-        self._overflow_group.list_action_item = []
 
         #First check if ActionView could display all ActionItems
         if total_width <= self.width:
+            if self._state == 'all':
+                return
+
+            self._state = 'all'
+            self._clear_all()
             #If yes, then display them
             for child in self._list_action_items:
+                child.size_hint_y = 1
                 super(ActionView, self).add_widget(child)
-                
-            for group in self._list_action_group:
-                for child in group.list_action_item:
-                    group.clear_widgets()
-                    super(ActionView, self).add_widget(child)
 
-            if self.use_separator==True:
-                self.remove_widget(self.children[0])
+            for group in self._list_action_group:
+                if group.mode == 'spinner':
+                    super(ActionView, self).add_widget(group)
+                    group.show_group()
+                else:
+                    for child in group.list_action_item:
+                        child.size_hint_y = 1
+                        super(ActionView, self).add_widget(child)
+
         else:
             #If no, then check if all ActionItems could be displayed
             #using ActionGroup
@@ -366,24 +402,28 @@ class ActionView(BoxLayout):
                 total_width += group.minimum_width
 
             if total_width < self.width:
+                if self._state == 'group':
+                    return
+
+                self._state = 'group'
+                self._clear_all()
                 #If yes, then display them using ActionGroup
                 for child in self._list_action_items:
                     super(ActionView, self).add_widget(child)
 
                 for group in self._list_action_group:
-                    self._add_widget_with_separator(group)
+                    super(ActionView, self).add_widget(group)
                     group.show_group()
 
-                if self.use_separator==True:
-                    self.remove_widget(self.children[0])
             else:
                 #If no, then display as many ActionItem having 'important'
                 #set to true
+                self._clear_all()
                 hidden_items = []
                 hidden_groups = []
                 total_width = 0
 
-                width = self.width - self._overflow_group.minimum_width
+                width = self.width - self.overflow_group.minimum_width
                 for child in self._list_action_items:
                     if child.important == True:
                         if child.minimum_width + total_width < width:
@@ -406,25 +446,25 @@ class ActionView(BoxLayout):
                 #their ActionGroup
                 if total_width < self.width:
                     for group in self._list_action_group:
-                        if group.minimum_width + total_width + self.separator_width \
+                        if group.minimum_width + total_width + group.separator_width \
                            < width:
-                            self._add_widget_with_separator(group)
+                            super(ActionView, self).add_widget(group)
                             group.show_group()
-                            total_width += group.minimum_width + self.separator_width
+                            total_width += group.minimum_width + group.separator_width
                         else:
                             hidden_groups.append(group)
 
                 #For all the left ActionItems and ActionItems
-                #with in ActionGroups, Display them inside _overflow_group
+                #with in ActionGroups, Display them inside overflow_group
                 for child in hidden_items:
-                    self._overflow_group.add_widget(child)
+                    self.overflow_group.add_widget(child)
 
                 for group in hidden_groups:
                     for child in group.list_action_item:
-                        self._overflow_group.add_widget(child)
+                        self.overflow_group.add_widget(child)
                 
-                self._overflow_group.show_group()
-                super(ActionView, self).add_widget(self._overflow_group)
+                self.overflow_group.show_group()
+                super(ActionView, self).add_widget(self.overflow_group)
 
 class ContextualActionView(ActionView):
     '''ContextualActionView class
@@ -447,27 +487,30 @@ class ActionBar(BoxLayout):
 
     def __init__(self, **kwargs):
         super(ActionBar, self).__init__(**kwargs)
-
-        if 'action_view' in kwargs:
-            self.action_view = kwargs['action_view']
-            super(ActionBar, self).add_widget(self.action_view)
-
+        self.register_event_type('on_previous')
         self._stack_cont_action_view = []
+        self._emit_previous = partial(self.dispatch, 'on_previous')
 
     def add_widget(self, view):
-        if not isinstance(view, ContextualActionView):
+        if isinstance(view, ContextualActionView):
+            self._stack_cont_action_view.append(view)
+            view.unbind(on_previous=self._emit_previous)
+            view.bind(on_previous=self._emit_previous)
+            self.clear_widgets()
+            super(ActionBar, self).add_widget(view)
+
+        elif isinstance(view, ActionView):
+            self.action_view = view
+            super(ActionBar, self).add_widget(view)
+
+        else:
             raise ActionBarException(
-                'ActionBar can only add ContextualActionView')
+                'ActionBar can only add ContextualActionView or ActionView')
 
-        self._stack_cont_action_view.append(view)
-        view.unbind(on_done=self._pop_contextual_action_view,
-                    on_previous=self._pop_contextual_action_view)
-        view.bind(on_done=self._pop_contextual_action_view,
-                  on_previous=self._pop_contextual_action_view)
-        self.clear_widgets()
-        super(ActionBar, self).add_widget(view)
+    def on_previous(self, *args):
+        self._pop_contextual_action_view()
 
-    def _pop_contextual_action_view(self, view):
+    def _pop_contextual_action_view(self):
         '''Remove the current ContextualActionView and display either the
            previous one or the ActionView
         '''
@@ -485,13 +528,14 @@ if __name__ == "__main__":
     from kivy.clock import Clock
 
     float_layout = FloatLayout()
-    action_view = ActionView(use_separator=True)
-    action_bar = ActionBar(action_view=action_view, size_hint=(1,0.1),
+    overflow_group = ActionOverflow()
+    action_previous = ActionPrevious(title='AppTitle')
+    action_view = ActionView(use_separator=True,
+                             action_previous=action_previous,
+                             overflow_group=overflow_group)
+    action_bar = ActionBar(size_hint=(1,0.1),
                            pos_hint={'top':1, 'y':1})
-    
-
-    action_title = ActionTitle(text='view')
-    action_view.add_widget(action_title)
+    action_bar.add_widget(action_view)
     
 
     list_action_btn = []
@@ -501,12 +545,12 @@ if __name__ == "__main__":
     for i in xrange(5):
         action_view.add_widget(list_action_btn[i])
 
-    action_grp_1 = ActionGroup(text='Group1')
+    action_grp_1 = ActionGroup(text='Group1',mode='spinner')
     for i in xrange(5, 9):
         action_grp_1.add_widget(list_action_btn[i])
     action_view.add_widget(action_grp_1)
 
-    list_cont_view = []
+##    list_cont_view = []
 ##    def push_cont_view(btn):
 ##        index = int(btn.text[-1])
 ##        action_bar.add_widget(list_cont_view[index])
@@ -518,9 +562,8 @@ if __name__ == "__main__":
 ##        btn1.bind(on_release=push_cont_view)
 ##
 ##    for j in range(2):
-##        cont = ContextualActionView()
-##        cont_title = ActionTitle(text='ContextualActionView%d'%j)
-##        cont.add_widget(cont_title)
+##        cont_action_previous = ActionPrevious()
+##        cont = ContextualActionView(action_previous=cont_action_previous)
 ##        for i in range(3):
 ##            action_btn = ActionButton(text='CAV%d Btn%d'%(j,i))
 ##            cont.add_widget(action_btn)
