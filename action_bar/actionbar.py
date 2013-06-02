@@ -58,6 +58,9 @@ Builder.load_string('''
             source: self.background_image
 
 <ActionSeparator>:
+    size_hint_x: None
+    minimum_width: '2sp'
+    width: self.minimum_width
     canvas:
         Rectangle:
             pos: self.x, self.y+5
@@ -388,6 +391,8 @@ class ActionView(BoxLayout):
                     super(ActionView, self).add_widget(group)
                     group.show_group()
                 else:
+                    if group.list_action_item != []:
+                        super(ActionView, self).add_widget(ActionSeparator())                       
                     for child in group.list_action_item:
                         child.size_hint_y = 1
                         super(ActionView, self).add_widget(child)
@@ -545,7 +550,7 @@ if __name__ == "__main__":
     for i in xrange(5):
         action_view.add_widget(list_action_btn[i])
 
-    action_grp_1 = ActionGroup(text='Group1',mode='spinner')
+    action_grp_1 = ActionGroup(text='Group1',mode='normal')
     for i in xrange(5, 9):
         action_grp_1.add_widget(list_action_btn[i])
     action_view.add_widget(action_grp_1)
