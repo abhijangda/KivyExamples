@@ -36,6 +36,7 @@ from kivy.config import Config
 
 Builder.load_string('''
 <ActionBar>:
+    padding: '2sp'
     canvas:
         Color:
             rgba: self.background_color
@@ -122,12 +123,6 @@ Builder.load_string('''
     minimum_width: '90sp'
     ActionSeparator:
         pos: root.pos
-        size: root.separator_width, root.height
-        opacity: 1 if root.use_separator else 0
-        background_image: root.separator_image if root.use_separator else 'action_view.png'
-
-    ActionSeparator:
-        pos: root.right + root.separator_width, root.y
         size: root.separator_width, root.height
         opacity: 1 if root.use_separator else 0
         background_image: root.separator_image if root.use_separator else 'action_view.png'
