@@ -67,7 +67,7 @@ Builder.load_string('''
 
 <ActionButton>:
     minimum_width: '50sp'
-    background_normal: 'atlas://data/images/defaulttheme/button' if self.inside_group else './action_item.png'
+    background_normal: './action_bar.png' if self.inside_group else './action_item.png'
 
 <ActionToggleButton>:
     minimum_width: '50sp'
@@ -110,7 +110,7 @@ Builder.load_string('''
     background_normal: './action_group2.png'
     background_down: './action_group_down.png'
     background_disabled_normal: './action_spinner_disabled.png'
-    border: 30,20,8,12
+    border: 30,30,9,9
     minimum_width: '50sp'
     ActionSeparator:
         pos: root.pos
@@ -128,11 +128,11 @@ Builder.load_string('''
     size_hint_x: None
     minimum_width: '48sp'
     width: self.texture_size[0] if self.texture else self.minimum_width
-    ActionImage:
-        id: _o
-        size: root.size
-        pos: root.pos
-        source: root.background_normal
+##    ActionImage:
+##        id: _o
+##        size: root.size
+##        pos: root.pos
+##        source: root.background_normal
 
 <ActionDropDown>:
     auto_width: False
