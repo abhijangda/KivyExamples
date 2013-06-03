@@ -68,14 +68,17 @@ Builder.load_string('''
 <ActionButton>:
     minimum_width: '90sp'
     background_normal: './action_bar.png' if self.inside_group else './action_item.png'
+    background_down: './action_item_down.png'
 
 <ActionToggleButton>:
     minimum_width: '90sp'
     background_normal: 'atlas://data/images/defaulttheme/button' if self.inside_group else './action_item.png'
+    background_down: './action_item_down.png'
 
 <ActionCheck>:
     minimum_width: '90sp'
     background_normal: './action_item.png'
+    background_down: './action_item_down.png'
 
 <ActionPrevious>:
     previous_image_widget: _previous_image
@@ -84,6 +87,7 @@ Builder.load_string('''
     minimum_width: '200sp'
     width: self.minimum_width
     background_normal: './action_item.png'
+    background_down: './action_item_down.png'
     important: True
     BoxLayout:
         orientation: 'horizontal'
@@ -368,6 +372,7 @@ class ActionView(BoxLayout):
         elif isinstance(action_item, ActionPrevious):
             #action_item is ActionPrevious
             self.action_previous = action_item
+
         else:
             #otherwise its an ActionItem only
             super(ActionView, self).add_widget(action_item, index)
