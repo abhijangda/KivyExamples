@@ -13,10 +13,10 @@ ActionBar contains an action_view property to set the actionview.
 ContextualActionView could be added by add_widget.
 '''
 
-__all__ = ('ActionBarException', 'ActionItem', 'ActionButton',
-           'ActionToggleButton', 'ActionCheck', 'ActionSeparator',
-           'ActionDropDown', 'ActionGroup', 'ActionOverflow',
-           'ActionView', 'ContextualActionView', 'ActionBar')
+__all__ = ('ActionBarException', 'ActionItem', 'ActionTitle',
+           'ActionButton', 'ActionToggleButton', 'ActionCheck',
+           'ActionSeparator', 'ActionGroup', 'ActionView', 
+           'ContextualActionView', 'ActionBar')
 
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.dropdown import DropDown
@@ -32,7 +32,6 @@ from kivy.graphics import Canvas
 from kivy.lang import Builder
 from kivy.core.image import Image
 from functools import partial
-from kivy.config import Config
 
 Builder.load_string('''
 <ActionBar>:
@@ -61,20 +60,20 @@ Builder.load_string('''
     width: self.minimum_width
     canvas:
         Rectangle:
-            pos: self.x, self.y+sp(5)
-            size: self.width, self.height-sp(10)
+            pos: self.x, self.y+5
+            size: self.width, self.height-10
             source: self.background_image
 
 <ActionButton>:
-    minimum_width: '90sp'
-    background_normal: './action_bar.png' if self.inside_group else './action_item.png'
-
-<ActionToggleButton>:
-    minimum_width: '90sp'
+    minimum_width: 50
     background_normal: 'atlas://data/images/defaulttheme/button' if self.inside_group else './action_item.png'
 
+<ActionToggleButton>:
+    minimum_width: 50
+    background_normal: './action_item.png'
+
 <ActionCheck>:
-    minimum_width: '90sp'
+    minimum_width: 50
     background_normal: './action_item.png'
 
 <ActionPrevious>:
@@ -107,38 +106,23 @@ Builder.load_string('''
             valign: 'middle'
 
 <ActionGroup>:
-    background_normal: './action_group.png'
+    background_normal: './action_group2.png'
     background_down: './action_group_down.png'
-    background_disabled_normal: './action_group_disabled.png'
-    border: 30,30,9,9
-    minimum_width: '90sp'
+    background_disabled_normal: './action_spinner_disabled.png'
+    border: 30,20,8,12
     ActionSeparator:
         pos: root.pos
         size: root.separator_width, root.height
         opacity: 1 if root.use_separator else 0
-        background_image: root.separator_image if root.use_separator else 'action_view.png'
-
-    ActionSeparator:
-        pos: root.right + root.separator_width, root.y
-        size: root.separator_width, root.height
-        opacity: 1 if root.use_separator else 0
-        background_image: root.separator_image if root.use_separator else 'action_view.png'
-
-<ActionImage>:
-    minimum_width: '50sp'
+        background_image: root.separator_image
 
 <ActionOverflow>:
     border: 0, 0, 0, 0
-    background_normal: './action_item.png'
-    background_down: './action_item_down.png'
+    background_normal: './overflow.png'
+    background_down: './overflow_down.png'
     size_hint_x: None
     minimum_width: '48sp'
     width: self.texture_size[0] if self.texture else self.minimum_width
-    canvas.after:
-        Rectangle:
-            pos: root.center_x - sp(24), root.center_y - sp(24)
-            size: sp(48), sp(48)
-            source: './overflow.png'
 
 <ActionDropDown>:
     auto_width: False
@@ -182,7 +166,7 @@ class ActionPrevious(ActionButton):
     '''
 
     app_image = StringProperty(
-        Config.get('kivy', 'window_icon'))
+        './kivy/kivy/data/logo/kivy-icon-32.png')
     '''Application icon for the ActionView.
     '''
 
@@ -218,14 +202,12 @@ class ActionToggleButton(ActionItem, ToggleButton):
     def __init__(self, **kwargs):
         super(ActionToggleButton, self).__init__(**kwargs)
 
-
 class ActionCheck(ActionItem, CheckBox):
     '''ActionCheck class
     '''
 
     def __init__(self, **kwargs):
         super(ActionCheck, self).__init__(**kwargs)
-
 
 class ActionSeparator(ActionItem):
     '''ActionSeparator class
@@ -279,15 +261,15 @@ class ActionGroup(Spinner, ActionItem):
         if isinstance(item, ActionSeparator):
             super(ActionGroup, self).add_widget(item)
             return
-
         if not isinstance(item, ActionItem):
-            raise ActionBarException('ActionGroup only accepts ActionItem')
+            raise ActionBarException('ActionView only accepts ActionItem')
 
         self.list_action_item.append(item)
 
     def show_group(self):
         self.clear_widgets()
         for item in self.list_action_item:
+            item.size_hint_y = None
             item.inside_group = True
             self._dropdown.add_widget(item)
 
@@ -299,14 +281,6 @@ class ActionGroup(Spinner, ActionItem):
 
     def _update_dropdown(self, *largs):
         pass
-
-    def _toggle_dropdown(self, *largs):
-        self.is_open = not self.is_open
-        self._dropdown.size_hint_x = None
-        self._dropdown.width = max([self.width, self.list_action_item[0].minimum_width])
-        for item in self.list_action_item:
-            item.size_hint_y = None
-            item.height = max([self.height, '48sp'])
 
     def clear_widgets(self):
         self._dropdown.clear_widgets()
@@ -378,7 +352,6 @@ class ActionView(BoxLayout):
     def on_use_separator(self, instance, value):
         for group in self._list_action_group:
             group.use_separator = value
-        self.overflow_group.use_separator = value
 
     def _clear_all(self):
         self.clear_widgets()
@@ -390,8 +363,6 @@ class ActionView(BoxLayout):
 
     def on_width(self, width, *args):
         total_width = 0
-        super_add = super(ActionView, self).add_widget
-
         for child in self._list_action_items:
             total_width += child.minimum_width
 
@@ -410,19 +381,19 @@ class ActionView(BoxLayout):
             for child in self._list_action_items:
                 child.size_hint_y = 1
                 child.inside_group = False
-                super_add(child)
+                super(ActionView, self).add_widget(child)
 
             for group in self._list_action_group:
                 if group.mode == 'spinner':
-                    super_add(group)
+                    super(ActionView, self).add_widget(group)
                     group.show_group()
                 else:
                     if group.list_action_item != []:
-                        super_add(ActionSeparator())                       
+                        super(ActionView, self).add_widget(ActionSeparator())                       
                     for child in group.list_action_item:
                         child.inside_group = False
-                        child.size_hint = 1, 1
-                        super_add(child)
+                        child.size_hint_y = 1
+                        super(ActionView, self).add_widget(child)
 
         else:
             #If no, then check if all ActionItems could be displayed
@@ -441,45 +412,38 @@ class ActionView(BoxLayout):
                 self._clear_all()
                 #If yes, then display them using ActionGroup
                 for child in self._list_action_items:
-                    child.size_hint = 1, 1
-                    super_add(child)
+                    super(ActionView, self).add_widget(child)
                     child.inside_group = False
 
                 for group in self._list_action_group:
-                    super_add(group)
+                    super(ActionView, self).add_widget(group)
                     group.show_group()
 
             else:
                 #If no, then display as many ActionItem having 'important'
                 #set to true
-                self._state = 'random'
                 self._clear_all()
                 hidden_items = []
                 hidden_groups = []
                 total_width = 0
 
                 width = self.width - self.overflow_group.minimum_width
-
-                super(ActionView, self).add_widget(self.action_previous)
-                if len(self._list_action_items) >= 1:
-                    for child in self._list_action_items[1:]:
-                        if child.important == True:
-                            if child.minimum_width + total_width < width:
-                                child.size_hint = 1, 1
-                                super_add(child)
-                                child.inside_group = False
-                                total_width += child.minimum_width
-                            else:
-                                hidden_items.append(child)
+                for child in self._list_action_items:
+                    if child.important == True:
+                        if child.minimum_width + total_width < width:
+                            super(ActionView, self).add_widget(child)
+                            child.inside_group = False
+                            total_width += child.minimum_width
                         else:
                             hidden_items.append(child)
+                    else:
+                        hidden_items.append(child)
 
                 #If space is left then display other ActionItems
                 if total_width < self.width:
                     for child in hidden_items:
                         if child.minimum_width + total_width < width:
-                            child.size_hint = 1, 1
-                            super_add(child)
+                            super(ActionView, self).add_widget(child)
                             total_width += child.minimum_width
                             child.inside_group = False
                             hidden_items.remove(child)
@@ -490,7 +454,7 @@ class ActionView(BoxLayout):
                     for group in self._list_action_group:
                         if group.minimum_width + total_width + group.separator_width \
                            < width:
-                            super_add(group)
+                            super(ActionView, self).add_widget(group)
                             group.show_group()
                             total_width += group.minimum_width + group.separator_width
                         else:
@@ -498,12 +462,12 @@ class ActionView(BoxLayout):
 
                 #For all the left ActionItems and ActionItems
                 #with in ActionGroups, Display them inside overflow_group
-                for group in hidden_groups:
-                    hidden_items.extend(group.list_action_item)
-
                 for child in hidden_items:
-                    child.size_hint_x = 1
                     self.overflow_group.add_widget(child)
+
+                for group in hidden_groups:
+                    for child in group.list_action_item:
+                        self.overflow_group.add_widget(child)
                 
                 self.overflow_group.show_group()
                 super(ActionView, self).add_widget(self.overflow_group)
@@ -576,7 +540,6 @@ if __name__ == "__main__":
         size_hint: 1,0.1
         pos_hint: {'top':1}
         ActionView:
-            use_separator: True
             ActionPrevious:
                 title: 'Title'
             ActionOverflow:
