@@ -97,10 +97,14 @@ Builder.load_string('''
         Image:
             id: _previous_image
             source: root.previous_image
+            allow_stretch: True
+            size_hint_x: None
             width: self.texture_size[0] if self.texture else 20
         Image:
             id: _app_image
             source: root.app_image
+            allow_stretch: True
+            size_hint_x: None
             width: self.texture_size[0] if self.texture else 20
         Label:
             id: _title
