@@ -32,6 +32,7 @@ from kivy.graphics import Canvas
 from kivy.lang import Builder
 from kivy.core.image import Image
 from functools import partial
+from kivy.config import Config
 
 Builder.load_string('''
 <ActionBar>:
@@ -65,15 +66,15 @@ Builder.load_string('''
             source: self.background_image
 
 <ActionButton>:
-    minimum_width: 50
+    minimum_width: '50sp'
     background_normal: 'atlas://data/images/defaulttheme/button' if self.inside_group else './action_item.png'
 
 <ActionToggleButton>:
-    minimum_width: 50
-    background_normal: './action_item.png'
+    minimum_width: '50sp'
+    background_normal: 'atlas://data/images/defaulttheme/button' if self.inside_group else './action_item.png'
 
 <ActionCheck>:
-    minimum_width: 50
+    minimum_width: '50sp'
     background_normal: './action_item.png'
 
 <ActionPrevious>:
@@ -110,11 +111,15 @@ Builder.load_string('''
     background_down: './action_group_down.png'
     background_disabled_normal: './action_spinner_disabled.png'
     border: 30,20,8,12
+    minimum_width: '50sp'
     ActionSeparator:
         pos: root.pos
         size: root.separator_width, root.height
         opacity: 1 if root.use_separator else 0
         background_image: root.separator_image
+
+<ActionImage>:
+    minimum_width: '50sp'
 
 <ActionOverflow>:
     border: 0, 0, 0, 0
@@ -123,6 +128,11 @@ Builder.load_string('''
     size_hint_x: None
     minimum_width: '48sp'
     width: self.texture_size[0] if self.texture else self.minimum_width
+    ActionImage:
+        id: _o
+        size: root.size
+        pos: root.pos
+        source: root.background_normal
 
 <ActionDropDown>:
     auto_width: False
@@ -154,6 +164,11 @@ class ActionItem(Widget):
     def __init__(self, **kwargs):
         super(ActionItem, self).__init__(**kwargs)
 
+class ActionImage(Image, ActionItem):
+
+    def __init__(self, **kwargs):
+        super(ActionImage, self).__init__(**kwargs)
+
 class ActionButton(Button, ActionItem):
     '''ActionButton class
     '''
@@ -166,7 +181,7 @@ class ActionPrevious(ActionButton):
     '''
 
     app_image = StringProperty(
-        './kivy/kivy/data/logo/kivy-icon-32.png')
+        Config.get('kivy', 'window_icon'))
     '''Application icon for the ActionView.
     '''
 
@@ -202,12 +217,14 @@ class ActionToggleButton(ActionItem, ToggleButton):
     def __init__(self, **kwargs):
         super(ActionToggleButton, self).__init__(**kwargs)
 
+
 class ActionCheck(ActionItem, CheckBox):
     '''ActionCheck class
     '''
 
     def __init__(self, **kwargs):
         super(ActionCheck, self).__init__(**kwargs)
+
 
 class ActionSeparator(ActionItem):
     '''ActionSeparator class
@@ -258,18 +275,19 @@ class ActionGroup(Spinner, ActionItem):
         self.dropdown_cls = ActionDropDown
 
     def add_widget(self, item):
-        if isinstance(item, ActionSeparator):
+        if isinstance(item, ActionSeparator) or\
+           isinstance(item, ActionImage):
             super(ActionGroup, self).add_widget(item)
             return
+
         if not isinstance(item, ActionItem):
-            raise ActionBarException('ActionView only accepts ActionItem')
+            raise ActionBarException('ActionGroup only accepts ActionItem')
 
         self.list_action_item.append(item)
 
     def show_group(self):
         self.clear_widgets()
         for item in self.list_action_item:
-            item.size_hint_y = None
             item.inside_group = True
             self._dropdown.add_widget(item)
 
@@ -281,6 +299,14 @@ class ActionGroup(Spinner, ActionItem):
 
     def _update_dropdown(self, *largs):
         pass
+
+    def _toggle_dropdown(self, *largs):
+        self.is_open = not self.is_open
+        self._dropdown.size_hint_x = None
+        self._dropdown.width = self.width
+        for item in self.list_action_item:
+            item.size_hint_y = None
+            item.height = self.height
 
     def clear_widgets(self):
         self._dropdown.clear_widgets()
@@ -422,22 +448,26 @@ class ActionView(BoxLayout):
             else:
                 #If no, then display as many ActionItem having 'important'
                 #set to true
+                self._state = 'random'
                 self._clear_all()
                 hidden_items = []
                 hidden_groups = []
                 total_width = 0
 
                 width = self.width - self.overflow_group.minimum_width
-                for child in self._list_action_items:
-                    if child.important == True:
-                        if child.minimum_width + total_width < width:
-                            super(ActionView, self).add_widget(child)
-                            child.inside_group = False
-                            total_width += child.minimum_width
+
+                super(ActionView, self).add_widget(self.action_previous)
+                if len(self._list_action_items) >= 1:
+                    for child in self._list_action_items[1:]:
+                        if child.important == True:
+                            if child.minimum_width + total_width < width:
+                                super(ActionView, self).add_widget(child)
+                                child.inside_group = False
+                                total_width += child.minimum_width
+                            else:
+                                hidden_items.append(child)
                         else:
                             hidden_items.append(child)
-                    else:
-                        hidden_items.append(child)
 
                 #If space is left then display other ActionItems
                 if total_width < self.width:
